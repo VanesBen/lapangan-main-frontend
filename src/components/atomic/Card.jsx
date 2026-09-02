@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Button from './Button';
 
-export default function Card({ id, photo, image, name, location, price }) {
+export default function Card({ id, photo, image, name, location, price, type}) {
   // Fallback image jika photo/image dari API tidak tersedia
   const defaultImage =
     'https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=800&auto=format&fit=crop';
@@ -48,6 +49,8 @@ export default function Card({ id, photo, image, name, location, price }) {
         <p className="text-sm text-[#0B4D26]">
           Mulai dari <span className="font-extrabold text-base">{price || 'Rp75.000'}</span> /jam
         </p>
+
+        {type == "admin" ? <Button title={"Update"}/> : null}
       </div>
     </Link>
   );

@@ -9,6 +9,8 @@ import DashboardLayout from "./layout/DashboardLayout";
 import ProtectedRoute from "./components/atomic/ProtectedRoutes";
 import Register from "./pages/Register";
 import BookingHistory from "./pages/BookingHistory";
+import AdminCourts from "./pages/AdminCourts";
+import CreateCourts from "./pages/CreateCourts";
 
 export default function AppRoutes() {
     return (
@@ -24,6 +26,8 @@ export default function AppRoutes() {
             <Route element={<ProtectedRoute allowedRoles={"admin"}/>}>
                 <Route element={<DashboardLayout/>}>
                     <Route path="/admin" element={<BookingHistory/>}/>
+                    <Route path="/admin/courts" element={<AdminCourts/>}/>
+                    <Route path="/admin/courts/create" element={<CreateCourts/>}/>
                 </Route>
             </Route>
         </Routes>
