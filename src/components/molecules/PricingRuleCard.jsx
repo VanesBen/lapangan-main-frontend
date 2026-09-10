@@ -30,17 +30,20 @@ export default function PricingRuleCard({
 
     // Helper cek overlap
     const checkOverlap = (targetRule, excludeId = null) => {
-        if (targetRule.start_hour >= targetRule.end_hour) {
+        const startHour = Number(targetRule.start_hour);
+        const endHour = Number(targetRule.end_hour);
+
+        if (startHour >= endHour) {
             return "Jam selesai harus lebih besar dari jam mulai!";
         }
         const hasOverlap = pricingRules.some((rule) => {
             const ruleId = rule.id ?? rule._tempId;
             if (excludeId && ruleId === excludeId) return false;
             if (rule.day_type.toLowerCase() !== targetRule.day_type.toLowerCase()) return false;
-            return targetRule.start_hour < rule.end_hour && targetRule.end_hour > rule.start_hour;
+            return startHour < rule.end_hour && endHour > rule.start_hour;
         });
         if (hasOverlap) {
-            return `Rentang jam ${targetRule.start_hour}:00 - ${targetRule.end_hour}:00 bentrok dengan aturan ${targetRule.day_type}!`;
+            return `Rentang jam ${startHour}:00 - ${endHour}:00 bentrok dengan aturan ${targetRule.day_type}!`;
         }
         return null;
     };
@@ -56,7 +59,14 @@ export default function PricingRuleCard({
     };
 
     const handleSaveEdit = async (identifier) => {
-        const overlapWarning = checkOverlap(editRuleData, identifier);
+        const normalizedData = {
+            ...editRuleData,
+            start_hour: editRuleData.start_hour === '' ? 0 : Number(editRuleData.start_hour),
+            end_hour: editRuleData.end_hour === '' ? 1 : Number(editRuleData.end_hour),
+            price_per_hour: editRuleData.price_per_hour === '' ? 0 : Number(editRuleData.price_per_hour),
+        };
+
+        const overlapWarning = checkOverlap(normalizedData, identifier);
         if (overlapWarning) {
             toast.error(overlapWarning);
             return;
@@ -65,7 +75,7 @@ export default function PricingRuleCard({
         // Mode 1: Lokal (Create Court)
         if (isLocalMode) {
             const updated = pricingRules.map((r) => 
-                (r.id ?? r._tempId) === identifier ? { ...r, ...editRuleData } : r
+                (r.id ?? r._tempId) === identifier ? { ...r, ...normalizedData } : r
             );
             onChange(updated);
             setEditingRuleId(null);
@@ -76,7 +86,7 @@ export default function PricingRuleCard({
         // Mode 2: API (Edit Court)
         setSavingRule(true);
         try {
-            await axiosClient.patch(`/prices/${identifier}`, editRuleData);
+            await axiosClient.patch(`/prices/${identifier}`, normalizedData);
             setEditingRuleId(null);
             onRefresh();
             toast.success("Aturan tarif berhasil di-update!");
@@ -113,7 +123,14 @@ export default function PricingRuleCard({
     const handleCreateRule = async (e) => {
         e.preventDefault();
 
-        const overlapWarning = checkOverlap(newRuleData);
+        const normalizedData = {
+            ...newRuleData,
+            start_hour: newRuleData.start_hour === '' ? 0 : Number(newRuleData.start_hour),
+            end_hour: newRuleData.end_hour === '' ? 1 : Number(newRuleData.end_hour),
+            price_per_hour: newRuleData.price_per_hour === '' ? 0 : Number(newRuleData.price_per_hour),
+        };
+
+        const overlapWarning = checkOverlap(normalizedData);
         if (overlapWarning) {
             toast.error(overlapWarning);
             return;
@@ -123,10 +140,16 @@ export default function PricingRuleCard({
         if (isLocalMode) {
             const newItem = {
                 _tempId: Date.now(), // Unique identifier lokal
-                ...newRuleData,
+                ...normalizedData,
             };
             onChange([...pricingRules, newItem]);
             setShowAddForm(false);
+            setNewRuleData({
+                day_type: 'weekday',
+                start_hour: 8,
+                end_hour: 17,
+                price_per_hour: 75000,
+            });
             toast.success("Slot tarif ditambahkan ke daftar.");
             return;
         }
@@ -136,9 +159,15 @@ export default function PricingRuleCard({
         try {
             await axiosClient.post('/prices', {
                 courts_id: courtId,
-                ...newRuleData,
+                ...normalizedData,
             });
             setShowAddForm(false);
+            setNewRuleData({
+                day_type: 'weekday',
+                start_hour: 8,
+                end_hour: 17,
+                price_per_hour: 75000,
+            });
             onRefresh();
             toast.success("Aturan tarif baru tersimpan!");
         } catch (err) {
@@ -173,51 +202,50 @@ export default function PricingRuleCard({
                 <h3 className="text-xs font-bold uppercase text-neutral-400">Tambah Aturan Baru</h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                {/* Input dropdown dan fields tetap sama */}
                 <div>
                     <label className="block text-[10px] text-neutral-400 uppercase font-semibold mb-1">Tipe Hari</label>
                     <select
-                    value={newRuleData.day_type}
-                    onChange={(e) => setNewRuleData({ ...newRuleData, day_type: e.target.value })}
-                    className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
+                        value={newRuleData.day_type}
+                        onChange={(e) => setNewRuleData({ ...newRuleData, day_type: e.target.value })}
+                        className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
                     >
-                    <option value="weekday">Weekday</option>
-                    <option value="weekend">Weekend</option>
+                        <option value="weekday">Weekday</option>
+                        <option value="weekend">Weekend</option>
                     </select>
                 </div>
 
                 <div>
                     <label className="block text-[10px] text-neutral-400 uppercase font-semibold mb-1">Jam Mulai</label>
                     <input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={newRuleData.start_hour}
-                    onChange={(e) => setNewRuleData({ ...newRuleData, start_hour: Number(e.target.value) })}
-                    className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
+                        type="number"
+                        min="0"
+                        max="23"
+                        value={newRuleData.start_hour}
+                        onChange={(e) => setNewRuleData({ ...newRuleData, start_hour: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
                     />
                 </div>
 
                 <div>
                     <label className="block text-[10px] text-neutral-400 uppercase font-semibold mb-1">Jam Selesai</label>
                     <input
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={newRuleData.end_hour}
-                    onChange={(e) => setNewRuleData({ ...newRuleData, end_hour: Number(e.target.value) })}
-                    className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
+                        type="number"
+                        min="1"
+                        max="24"
+                        value={newRuleData.end_hour}
+                        onChange={(e) => setNewRuleData({ ...newRuleData, end_hour: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
                     />
                 </div>
 
                 <div>
                     <label className="block text-[10px] text-neutral-400 uppercase font-semibold mb-1">Tarif / Jam (Rp)</label>
                     <input
-                    type="number"
-                    step="5000"
-                    value={newRuleData.price_per_hour}
-                    onChange={(e) => setNewRuleData({ ...newRuleData, price_per_hour: Number(e.target.value) })}
-                    className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
+                        type="number"
+                        step="5000"
+                        value={newRuleData.price_per_hour}
+                        onChange={(e) => setNewRuleData({ ...newRuleData, price_per_hour: e.target.value === '' ? '' : Number(e.target.value) })}
+                        className="w-full bg-[#13161b] border border-neutral-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-lime-400"
                     />
                 </div>
                 </div>
@@ -230,15 +258,14 @@ export default function PricingRuleCard({
                 >
                     Tutup
                 </button>
-
                 
                 <button
                     type="button"
                     disabled={savingRule}
                     onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        handleCreateRule(e)
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleCreateRule(e);
                     }}
                     className="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black text-xs font-bold disabled:opacity-50"
                 >
@@ -291,7 +318,7 @@ export default function PricingRuleCard({
                                                         min="0"
                                                         max="23"
                                                         value={editRuleData.start_hour}
-                                                        onChange={(e) => setEditRuleData({ ...editRuleData, start_hour: Number(e.target.value) })}
+                                                        onChange={(e) => setEditRuleData({ ...editRuleData, start_hour: e.target.value === '' ? '' : Number(e.target.value) })}
                                                         className="w-14 bg-[#13161b] border border-neutral-700 rounded-lg px-2 py-1 text-center text-white focus:border-lime-400 focus:outline-none"
                                                     />
                                                     <span className="text-neutral-500">-</span>
@@ -300,7 +327,7 @@ export default function PricingRuleCard({
                                                         min="1"
                                                         max="24"
                                                         value={editRuleData.end_hour}
-                                                        onChange={(e) => setEditRuleData({ ...editRuleData, end_hour: Number(e.target.value) })}
+                                                        onChange={(e) => setEditRuleData({ ...editRuleData, end_hour: e.target.value === '' ? '' : Number(e.target.value) })}
                                                         className="w-14 bg-[#13161b] border border-neutral-700 rounded-lg px-2 py-1 text-center text-white focus:border-lime-400 focus:outline-none"
                                                     />
                                                 </div>
@@ -312,7 +339,7 @@ export default function PricingRuleCard({
                                                         type="number"
                                                         step="5000"
                                                         value={editRuleData.price_per_hour}
-                                                        onChange={(e) => setEditRuleData({ ...editRuleData, price_per_hour: Number(e.target.value) })}
+                                                        onChange={(e) => setEditRuleData({ ...editRuleData, price_per_hour: e.target.value === '' ? '' : Number(e.target.value) })}
                                                         className="w-28 bg-[#13161b] border border-neutral-700 rounded-lg px-2 py-1 text-white focus:border-lime-400 focus:outline-none"
                                                     />
                                                 </div>

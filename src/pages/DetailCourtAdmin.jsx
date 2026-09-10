@@ -5,6 +5,7 @@ import Button from "../components/atomic/Button";
 import InputBox from "../components/atomic/InputBox";
 import Dropdown from "../components/atomic/Dropdown";
 import PricingRuleCard from "../components/molecules/PricingRuleCard";
+import toast from "react-hot-toast";
 
 export default function AdminCourtDetail() {
   const { id } = useParams();
@@ -12,7 +13,6 @@ export default function AdminCourtDetail() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState(null);
 
   // Form State
   const [pricingRules, setPricingRules] = useState([]);
@@ -80,24 +80,27 @@ export default function AdminCourtDetail() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setErrors(null);
 
     const payload = {
       ...formData,
-      is_active: String(formData.is_active)
+      is_active: Boolean(formData.is_active)
+    }
+
+    if (typeof payload.photo === 'string' && payload.photo.includes('fakepath')) {
+      delete payload.photo;
     }
 
     axiosClient
       .patch(`/courts/${id}`, payload)
       .then(() => {
-        alert("Informasi lapangan berhasil diperbarui!");
+        toast.success("Informasi lapangan berhasil diperbarui!")
         navigate("/admin/courts"); // arahkan balik ke list court admin
       })
       .catch((err) => {
         if (err.response && err.response.data?.errors) {
-          setErrors(err.response.data.errors);
+          toast.error(err.response.data.errors)
         } else {
-          alert("Terjadi kesalahan saat menyimpan perubahan.");
+          toast.error("Terjadi kesalahan saat menyimpan perubahan.")
         }
       })
       .finally(() => setSaving(false));
@@ -138,16 +141,7 @@ export default function AdminCourtDetail() {
         </span>
       </div>
 
-      {/* Validation Errors */}
-      {errors && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 rounded-xl text-sm">
-          <ul className="list-disc pl-5 space-y-1">
-            {Object.keys(errors).map((key) => (
-              <li key={key}>{errors[key][0]}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+
 
       {/* Two-Column Layout: Info & Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-6 border-b border-neutral-800">
@@ -254,7 +248,6 @@ export default function AdminCourtDetail() {
               onChange={handleChange} 
               options={CATEGORY_OPTIONS} 
               placeholder="Pilih Kategori Lapangan" 
-              error={errors?.category?.[0] || errors?.category}
             />
 
             <InputBox 
