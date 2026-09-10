@@ -8,6 +8,9 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { user, setUser } = useAuth();
 
+  const token = localStorage.getItem("ACCESS_TOKEN");
+  const isLoggedIn = !!token;
+
   const bookingData = location.state || {};
   const {
     courtId,
@@ -18,6 +21,7 @@ export default function Checkout() {
     totalPrice = 0,
   } = bookingData;
 
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('qris');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -69,14 +73,11 @@ export default function Checkout() {
 
     try {
       await axiosClient.post('/bookings', payload);
-      <SuccessModal
-        isOpen={showSuccessModal}
-        onClose={() => {
-          setShowSuccessModal(false);
-          navigate('/katalog');
-        }}
-      />
-      navigate('/history');
+      setShowSuccessModal(true)
+      
+
+      navigate('/customer/history');
+
     } catch (err) {
       console.error(err);
       const apiMsg = err.response?.data?.message || 'Gagal memproses booking. Silakan coba lagi.';
@@ -89,7 +90,7 @@ export default function Checkout() {
   // TRIGGER TOMBOL BAYAR SEKARANG
   const handleProcessBooking = () => {
     // Kalau belum login, munculkan Modal Auth dulu
-    if (!user) {
+    if (!isLoggedIn) {
       setShowAuthModal(true);
       return;
     }
@@ -137,6 +138,18 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-[#1c1d1f] text-white font-sans py-10 px-4 sm:px-6 relative">
+      {
+          showSuccessModal == true ? 
+          <SuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => {
+            setShowSuccessModal(false);
+            navigate('/customer/history');
+          }}
+        />
+        : null 
+      }
+      
       <div className="max-w-4xl mx-auto space-y-8">
         
         {/* HEADER */}

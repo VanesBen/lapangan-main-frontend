@@ -7,6 +7,8 @@ export default function BookingHistory() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+
+
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

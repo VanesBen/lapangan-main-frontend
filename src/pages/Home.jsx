@@ -4,9 +4,11 @@ import featureIC1 from "../assets/icon/feature-ic-1.png"
 import featureIC2 from "../assets/icon/feature-ic-2.png"
 import featureIC3 from "../assets/icon/feature-ic-3.png"
 import { useNavigate } from "react-router-dom"
+import Pagination from "../components/atomic/Pagination"
 
 export default function Home() {
     const navigate = useNavigate();
+    
     const features = [
         {
             icon: featureIC1,
@@ -51,6 +53,7 @@ export default function Home() {
 
     return (
         <>
+        <Pagination/>
             <section id="Hero" className="relative w-full h-[500px] md:h-[600px] overflow-hidden">
                 {/* Background Image dengan Dark Overlay */}
                 <img 
@@ -176,6 +179,7 @@ export default function Home() {
                     </div>
                 ))}
             </div>
+            
         </section>
         
         </>

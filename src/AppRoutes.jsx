@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import BookingHistory from "./pages/BookingHistory";
 import AdminCourts from "./pages/AdminCourts";
 import CreateCourts from "./pages/CreateCourts";
+import DetailCourtAdmin from "./pages/DetailCourtAdmin";
 
 export default function AppRoutes() {
     return (
@@ -22,11 +23,15 @@ export default function AppRoutes() {
                 <Route path="/register" element={<Register/>}/>
                 <Route path="/checkout" element={<Checkout/>} />
                 <Route path="/katalog/:id" element={<DetailCourt/>} />
+                <Route element={<ProtectedRoute allowedRoles={"customer"}/>}>
+                    <Route path="/customer/history" element={<BookingHistory/>}/>
+                </Route>
             </Route>
             <Route element={<ProtectedRoute allowedRoles={"admin"}/>}>
                 <Route element={<DashboardLayout/>}>
                     <Route path="/admin" element={<BookingHistory/>}/>
                     <Route path="/admin/courts" element={<AdminCourts/>}/>
+                    <Route path="/admin/courts/:id" element={<DetailCourtAdmin/>}/>
                     <Route path="/admin/courts/create" element={<CreateCourts/>}/>
                 </Route>
             </Route>

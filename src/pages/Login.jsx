@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axiosClient from "../axios-client";
 import { useAuth } from "../contexts/AuthContext";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const { setUser, setIsLoading, isLoading } = useAuth();
@@ -39,7 +40,7 @@ export default function Login() {
         }
       })
       .catch((err) => {
-        console.error("Proses login error:", err);
+        toast.error("Proses login error:", err)
         const response = err.response;
 
         if (response && response.status === 422) {
@@ -48,16 +49,9 @@ export default function Login() {
             typeof apiError === "object"
               ? Object.values(apiError).flat().join("\n")
               : response.data.message;
-
-          setAlert({
-            type: "error",
-            message: msg || "Format email atau password salah!",
-          });
+          toast.error(msg || "Format email atau password salah!")
         } else {
-          setAlert({
-            type: "error",
-            message: response?.data?.message || "Email atau password salah!",
-          });
+          toast.error(response?.data?.message || "Email atau password salah!")
         }
       })
       .finally(() => {
@@ -77,13 +71,6 @@ export default function Login() {
             Selamat datang kembali di platform rental!
           </p>
         </div>
-
-        {/* Alert Error Box */}
-        {alert.message && (
-          <div className="mb-5 p-3.5 bg-red-950/50 border border-red-800 text-red-300 text-xs rounded-2xl font-semibold whitespace-pre-line text-center">
-            {alert.message}
-          </div>
-        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

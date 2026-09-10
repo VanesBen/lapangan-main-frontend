@@ -19,68 +19,104 @@ export default function DetailCourt() {
     );
     const [selectedSlots, setSelectedSlots] = useState([]);
 
-    // 1. Fetch Data Court & Pricing Rules secara Paralel
-    useEffect(() => {
+    // State pendukung
+    const [bookedHours, setBookedHours] = useState([]); // Berisi angka jam, misal: [14, 15, 21]
+
+    const fetchCourtAndPricings = async () => {
         setLoading(true);
-        
-        Promise.all([
-        axiosClient.get(`/courts/${id}`),
-        axiosClient.get('/pricings')
-        ])
-        .then(([courtRes, pricingRes]) => {
-            // Unpack Data Court
-            const courtData = courtRes.data.data || courtRes.data;
+        try {
+            const { data } = await axiosClient.get(`/courts/${id}`);
+            const courtData = data.data || data;
+            
             setCourt(courtData);
 
-            // Unpack & Filter Pricing Rules Khusus Lapangan Ini
-            const allPricings = pricingRes.data.data?.items || pricingRes.data?.items || [];
-            const courtPricings = allPricings.filter(
-            (rule) => String(rule.courts_id) === String(id)
-            );
-            setPricingRules(courtPricings);
-        })
-        .catch((err) => {
+            // Ambil prices langsung dari eager load relasi court (bebas limit pagination!)
+            const rules = courtData.prices || [];
+            setPricingRules(rules);
+        } catch (err) {
             console.error(err);
             setError('Gagal mengambil data detail/harga lapangan.');
-        })
-        .finally(() => {
+        } finally {
             setLoading(false);
-        });
-    }, [id]);
+        }
+    };
 
+    const fetchAvailability = async () => {
+        if (!id || !selectedDate) return;
 
-    useEffect(() => {
-        if (pricingRules.length === 0) return;
+        try {
+        const { data } = await axiosClient.get(`/courts/${id}/availability?date=${selectedDate}`);
+        const booked = data.booked_hours || data.data?.booked_hours || [];
+        setBookedHours(booked);
+        } catch (err) {
+        console.error('Gagal mengambil ketersediaan slot:', err);
+        setBookedHours([]);
+        }
+    };
 
-        // Cek Jenis Hari (0 = Minggu, 6 = Sabtu -> Weekend)
-        const dateObj = new Date(selectedDate);
+    const generateSlots = () => {
+        if (pricingRules.length === 0) {
+            setTimeSlots([]);
+            return;
+        }
+
+        // Pastikan parsing tanggal akurat (hindari off-by-one karena timezone UTC)
+        const [year, month, day] = selectedDate.split('-').map(Number);
+        const dateObj = new Date(year, month - 1, day);
         const dayOfWeek = dateObj.getDay();
         const currentDayType = (dayOfWeek === 0 || dayOfWeek === 6) ? 'weekend' : 'weekday';
 
         const activeRules = pricingRules.filter(
-        (rule) => rule.day_type.toLowerCase() === currentDayType
+            (rule) => rule.day_type.toLowerCase() === currentDayType
         );
 
-        const generatedSlots = [];
+        const slotsMap = new Map(); // Pakai Map agar jam yang sama tidak duplikat
 
         activeRules.forEach((rule) => {
-        for (let hour = rule.start_hour; hour < rule.end_hour; hour++) {
-            const startFormatted = hour.toString().padStart(2, '0') + ':00';
-            const endFormatted = (hour + 1).toString().padStart(2, '0') + ':00';
+            const start = Number(rule.start_hour);
+            const end = Number(rule.end_hour);
 
-            generatedSlots.push({
-            hour: hour,
-            time: `${startFormatted} - ${endFormatted}`,
-            price: rule.price_per_hour,
-            isBooked: false, // Nanti dikawinkan dengan API Bookings
-            });
-        }
+            for (let hour = start; hour < end; hour++) {
+                const startFormatted = hour.toString().padStart(2, '0') + ':00';
+                const endFormatted = (hour + 1).toString().padStart(2, '0') + ':00';
+
+                // Simpan ke map berdasarkan hour
+                if (!slotsMap.has(hour)) {
+                    slotsMap.set(hour, {
+                        hour: hour,
+                        time: `${startFormatted} - ${endFormatted}`,
+                        price: Number(rule.price_per_hour),
+                        isBooked: bookedHours.includes(hour),
+                    });
+                }
+            }
         });
 
-        // Urutkan slot berdasarkan jam
-        generatedSlots.sort((a, b) => a.hour - b.hour);
+        // Urutkan slot berdasarkan jam dari pagi ke malam
+        const generatedSlots = Array.from(slotsMap.values()).sort((a, b) => a.hour - b.hour);
         setTimeSlots(generatedSlots);
-    }, [selectedDate, pricingRules]);
+    };
+
+    // ==========================================
+    // USE EFFECT TRIGGERS (Ringkas & Mudah Dibaca)
+    // ==========================================
+
+    // 1. Dijalankan sekali saat ID lapangan dimuat
+    useEffect(() => {
+        fetchCourtAndPricings();
+    }, [id]);
+
+    // 2. Dijalankan tiap kali user ganti tanggal
+    useEffect(() => {
+        fetchAvailability();
+        // Reset slot yang sedang dipilih jika tanggal berganti
+        setSelectedSlots([]);
+    }, [id, selectedDate]);
+
+    // 3. Dijalankan tiap kali pricingRules atau bookedHours berhasil di-update
+    useEffect(() => {
+        generateSlots();
+    }, [pricingRules, bookedHours, selectedDate]);
 
     const handleSelectSlot = (slot) => {
         if (slot.isBooked) return;

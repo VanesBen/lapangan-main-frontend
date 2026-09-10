@@ -2,14 +2,21 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../axios-client';
 import { useAuth } from '../contexts/AuthContext';
+import InputBox from '../components/atomic/InputBox';
+import Dropdown from '../components/atomic/Dropdown';
+import Button from '../components/atomic/Button';
+import toast from 'react-hot-toast';
+import PricingRuleCard from '../components/molecules/PricingRuleCard';
 
 export default function CreateCourts() {
   const navigate = useNavigate();
-  const { setIsLoading, isLoading } = useAuth();
+  const { setIsLoading } = useAuth();
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
     photo: '',
+    category: '',
     description: '',
     is_active: true,
     facilities: '',
@@ -17,186 +24,168 @@ export default function CreateCourts() {
     rules: '',
   });
 
-  const [error, setError] = useState(null);
+  // State untuk menampung aturan harga lokal dari PricingRuleCard
+  const [pricingRules, setPricingRules] = useState([]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
+  const CATEGORY_OPTIONS = [
+    'Basket',
+    'Futsal / Sepakbola',
+    'Badminton',
+    'Padel',
+    'Tenis',
+  ];
+
+const handleChange = (e) => {
+  const { name, value, type, checked } = e.target;
+  setFormData((prev) => ({
+    ...prev,
+    [name]: type === 'checkbox' ? checked : value,
+  }));
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    console.log(formData.photo)
+
+    if (!formData.photo) {
+      toast.error('Foto lapangan wajib dipilih dan tunggu sampai selesai diproses!');
+      return;
+    }
+    
+    if (pricingRules.length === 0) {
+      toast.error('Minimal harus menambahkan 1 aturan jam & tarif sewa!');
+      return;
+    }
+
+    setSaving(true);
     setIsLoading(true);
 
     try {
-      await axiosClient.post('/courts', formData);
+      await axiosClient.post('/courts', {
+        ...formData,
+        pricing_rules: pricingRules,
+      });
+      toast.success('Lapangan & aturan tarif berhasil dibuat!');
       navigate('/admin/courts');
     } catch (err) {
       console.error(err);
-      setError(
-        err.response?.data?.message || 'Gagal menambahkan data lapangan. Cek kembali inputan Anda.'
-      );
+      toast.error(err.response?.data?.message || 'Gagal menyimpan lapangan.');
     } finally {
       setIsLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#111215] text-white flex items-center justify-center p-4 sm:p-6 md:p-10 font-sans">
-      <div className="w-full max-w-2xl bg-[#1d2229] border border-gray-800 rounded-3xl p-6 sm:p-10 shadow-2xl">
+    <div className="min-h-screen bg-[#141414] text-white p-6 md:p-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2">
-            Tambah Lapangan
-          </h1>
-          <p className="text-gray-400 text-sm">
-            Lengkapi data di bawah ini untuk mendaftarkan lapangan baru
-          </p>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Form Container */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Field: Name */}
+        <div className="flex items-center justify-between pb-6 border-b border-neutral-800">
           <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Nama Lapangan
-            </label>
-            <input
-              type="text"
-              name="name"
-              required
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Contoh: Lapangan Futsal VVIP"
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition"
-            />
-          </div>
-
-          {/* Field: Location */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Lokasi / Kota
-            </label>
-            <input
-              type="text"
-              name="location"
-              required
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="Contoh: Jakarta Selatan"
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition"
-            />
-          </div>
-
-          {/* Field: Photo URL / Data URI */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Foto Lapangan (URL / Base64)
-            </label>
-            <input
-              type="text"
-              name="photo"
-              value={formData.photo}
-              onChange={handleChange}
-              placeholder="https://... atau data:image/..."
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition"
-            />
-          </div>
-
-          {/* Field: Facilities */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Fasilitas
-            </label>
-            <input
-              type="text"
-              name="facilities"
-              value={formData.facilities}
-              onChange={handleChange}
-              placeholder="Contoh: WiFi, Locker Room, Shower Air Hangat, Kantin"
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition"
-            />
-          </div>
-
-          {/* Field: Rules */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Peraturan Lapangan
-            </label>
-            <textarea
-              name="rules"
-              rows={3}
-              value={formData.rules}
-              onChange={handleChange}
-              placeholder="Contoh: Wajib sepatu futsal sol karet, Dilarang merokok di area indoor"
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition resize-none"
-            />
-          </div>
-
-          {/* Field: Description */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-2">
-              Deskripsi
-            </label>
-            <textarea
-              name="description"
-              rows={3}
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Contoh: Lapangan Futsal Indoor Rumput Sintetis Super Premium standar nasional..."
-              className="w-full bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-lime-400 focus:ring-1 focus:ring-lime-400 transition resize-none"
-            />
-          </div>
-
-          {/* Field: Is Active (Checkbox / Switch) */}
-          <div className="flex items-center justify-between bg-[#13161b] border border-gray-800 rounded-2xl px-4 py-3.5">
-            <div>
-              <p className="text-sm font-semibold text-white">Status Lapangan Aktif</p>
-              <p className="text-xs text-gray-400">Aktifkan agar langsung muncul dan bisa disewa</p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                name="is_active"
-                checked={formData.is_active}
-                onChange={handleChange}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ccff00]"></div>
-            </label>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-4 space-y-3">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#ccff00] hover:bg-[#b8e600] active:scale-[0.99] transition-all text-black font-extrabold py-3.5 rounded-full shadow-lg text-sm tracking-wide disabled:opacity-50 disabled:cursor-not-allowed uppercase"
-            >
-              {isLoading ? 'Menyimpan...' : 'Simpan Lapangan'}
-            </button>
-
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="w-full text-center text-xs text-gray-400 hover:text-white py-2 transition"
+              className="text-sm text-neutral-400 hover:text-white mb-2 flex items-center gap-1.5 transition-colors"
             >
-              Batal dan Kembali
+              &larr; Kembali ke Daftar Lapangan
             </button>
+            <h1 className="text-2xl md:text-3xl font-bold">Tambah Lapangan Baru</h1>
+          </div>
+        </div>
+
+        {/* 1. Form Data Lapangan */}
+        <form id="court-form" onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-[#1e1e1e] border border-neutral-800 rounded-2xl p-6 md:p-8 space-y-6">
+            <h2 className="text-lg font-bold">Informasi Lapangan</h2>
+
+            <InputBox
+              title="Nama Lapangan"
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Contoh: Lapangan Futsal VVIP"
+              required
+            />
+
+            <Dropdown
+              title="Kategori Lapangan"
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+              options={CATEGORY_OPTIONS}
+              placeholder="Pilih Kategori Lapangan"
+            />
+
+            <InputBox
+              title="Lokasi / Kota"
+              name="location"
+              type="text"
+              value={formData.location}
+              onChange={handleChange}
+              placeholder="Contoh: Jakarta Selatan"
+              required
+            />
+
+            <InputBox 
+              title="Foto Lapangan" 
+              name="photo" 
+              type="file"
+              onChange={handleChange} 
+            />
+
+            <InputBox
+              title="Fasilitas (Pisahkan dengan koma)"
+              name="facilities"
+              type="text"
+              value={formData.facilities}
+              onChange={handleChange}
+              placeholder="WiFi, AC, Shower"
+            />
+
+            <InputBox
+              title="Peraturan"
+              name="rules"
+              type="text"
+              value={formData.rules}
+              onChange={handleChange}
+              placeholder="Dilarang membawa makanan luar"
+            />
+
+            <InputBox
+              title="Deskripsi"
+              name="description"
+              type="text"
+              value={formData.description}
+              onChange={handleChange}
+              placeholder="Deskripsi fasilitas dan keunggulan lapangan"
+            />
           </div>
         </form>
+
+        {/* 2. Section Aturan Jam & Tarif Sewa */}
+        <PricingRuleCard 
+          pricingRules={pricingRules} 
+          onChange={setPricingRules} 
+        />
+
+        {/* 3. Action Buttons di Paling Bawah */}
+        <div className="flex items-center justify-end gap-3 pt-6 border-t border-neutral-800">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="px-5 py-2.5 rounded-xl border border-neutral-700 text-neutral-300 text-sm font-medium hover:bg-neutral-800 transition-colors"
+          >
+            Batal
+          </button>
+          <Button
+            onClick={handleSubmit}
+            title={saving ? 'Menyimpan Semua...' : 'Buat Lapangan'}
+            disabled={saving}
+          />
+        </div>
+
       </div>
     </div>
   );

@@ -140,17 +140,35 @@ export default function DashboardLayout() {
           </div>
 
           {/* Profile & Logout */}
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold bg-[#ccff00]/10 text-[#ccff00] border border-[#ccff00]/20 px-3 py-1 rounded-full uppercase">
-              {user?.role || 'Admin'}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-400 text-xs font-bold px-4 py-2 rounded-xl transition-all"
-            >
-              Logout
-            </button>
-          </div>
+          <div className="flex items-center gap-4">
+                {/* User Profile Pill */}
+                <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                    <div className="w-7 h-7 rounded-full bg-neutral-700 flex items-center justify-center text-gray-300">
+                    <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="currentColor" 
+                        className="w-4 h-4"
+                    >
+                        <path 
+                        fillRule="evenodd" 
+                        d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" 
+                        clipRule="evenodd" 
+                        />
+                    </svg>
+                    </div>
+                    <span className="text-sm font-medium text-gray-200 pr-1">Admin</span>
+                </div>
+
+                {/* Tombol Logout Ramping */}
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-lg font-semibold px-3.5 py-2 rounded-xl border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500/20 hover:border-red-500/50 transition-all"
+                >
+                    Logout
+                </button>
+            </div>
         </header>
 
         {/* SUB PAGE RENDER HERE */}
