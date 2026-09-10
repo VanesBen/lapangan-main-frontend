@@ -18,7 +18,7 @@ export default function Login() {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setIsSubmitting(false)
+    setIsSubmitting(true)
     setAlert({ type: "", message: "" });
 
     const payload = { email, password };

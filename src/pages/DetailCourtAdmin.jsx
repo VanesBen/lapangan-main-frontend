@@ -83,7 +83,7 @@ export default function AdminCourtDetail() {
 
     const payload = {
       ...formData,
-      is_active: Boolean(formData.is_active)
+      is_active: formData.is_active ? 1 : 0
     }
 
     if (typeof payload.photo === 'string' && payload.photo.includes('fakepath')) {
